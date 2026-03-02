@@ -1,0 +1,206 @@
+(function(){
+
+if(window.__aeroInspector)return;
+window.__aeroInspector=true;
+
+const host=document.createElement("div");
+document.body.appendChild(host);
+const shadow=host.attachShadow({mode:"open"});
+
+shadow.innerHTML=`
+<style>
+:host{all:initial;}
+
+#dock{
+position:fixed;
+bottom:-450px;
+left:0;
+width:100%;
+height:450px;
+overflow:hidden;
+font-family:Segoe UI,system-ui,sans-serif;
+color:white;
+z-index:9999999;
+transition:bottom .6s cubic-bezier(.22,.9,.3,1);
+}
+
+#dock.open{bottom:0;}
+
+.glass{
+position:absolute;
+inset:0;
+backdrop-filter:blur(40px) saturate(200%);
+background:rgba(255,255,255,0.05);
+border-top:1px solid rgba(255,255,255,.15);
+box-shadow:0 -10px 60px rgba(0,0,0,.5);
+overflow:hidden;
+}
+
+.wave{
+position:absolute;
+width:200%;
+height:200%;
+background:radial-gradient(circle at 50% 50%, rgba(255,255,255,.08), transparent 60%);
+animation:waveMove 12s linear infinite;
+opacity:.5;
+}
+
+@keyframes waveMove{
+0%{transform:translate(-25%,-25%) rotate(0deg);}
+100%{transform:translate(-30%,-30%) rotate(360deg);}
+}
+
+.noise{
+position:absolute;
+inset:0;
+background-image:url("data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgNDAgNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGZpbHRlciBpZD0ibiI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjEuMiIgbnVtT2N0YXZlcz0iMiIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgZmlsdGVyPSJ1cmwoI24pIiBvcGFjaXR5PSIwLjA2Ii8+PC9zdmc+");
+mix-blend-mode:overlay;
+pointer-events:none;
+}
+
+#content{
+position:relative;
+height:100%;
+display:flex;
+flex-direction:column;
+}
+
+#topbar{
+padding:10px 20px;
+background:rgba(255,255,255,.05);
+border-bottom:1px solid rgba(255,255,255,.1);
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+button{
+background:rgba(255,255,255,.1);
+border:1px solid rgba(255,255,255,.2);
+color:white;
+padding:6px 12px;
+border-radius:10px;
+cursor:pointer;
+transition:.2s;
+}
+button:hover{
+background:rgba(255,255,255,.2);
+}
+
+#main{
+flex:1;
+padding:15px;
+overflow:auto;
+}
+
+select{
+background:rgba(0,0,0,.3);
+color:white;
+border:1px solid rgba(255,255,255,.2);
+padding:5px;
+border-radius:8px;
+width:100%;
+margin-top:10px;
+}
+
+textarea{
+width:100%;
+height:100px;
+margin-top:10px;
+background:rgba(0,0,0,.4);
+color:#0f0;
+border:1px solid rgba(255,255,255,.2);
+border-radius:10px;
+padding:10px;
+}
+
+.highlight-box{
+position:absolute;
+border:2px solid #4af;
+background:rgba(0,150,255,.1);
+pointer-events:none;
+z-index:9999998;
+}
+</style>
+
+<div id="dock">
+<div class="glass">
+<div class="wave"></div>
+<div class="noise"></div>
+</div>
+<div id="content">
+<div id="topbar">
+<div>Aero Inspector</div>
+<button id="close">Close</button>
+</div>
+<div id="main">
+<button id="pick">Pick Element</button>
+<select id="elementList"></select>
+<textarea id="styleEditor"></textarea>
+<button id="apply">Apply Styles</button>
+</div>
+</div>
+</div>
+`;
+
+const dock=shadow.querySelector("#dock");
+setTimeout(()=>dock.classList.add("open"),50);
+
+shadow.getElementById("close").onclick=()=>{
+dock.classList.remove("open");
+setTimeout(()=>{
+host.remove();
+delete window.__aeroInspector;
+},600);
+};
+
+const highlight=document.createElement("div");
+highlight.className="highlight-box";
+document.body.appendChild(highlight);
+highlight.style.display="none";
+
+let selected=null;
+
+function updateSelectorList(){
+const select=shadow.getElementById("elementList");
+select.innerHTML="";
+document.querySelectorAll("*").forEach(el=>{
+const opt=document.createElement("option");
+opt.value=el.tagName;
+opt.textContent=el.tagName.toLowerCase() + (el.id?"#"+el.id:"");
+select.appendChild(opt);
+});
+}
+
+shadow.getElementById("pick").onclick=()=>{
+document.body.style.cursor="crosshair";
+
+function handler(e){
+e.preventDefault();
+e.stopPropagation();
+selected=e.target;
+document.body.style.cursor="default";
+document.removeEventListener("click",handler,true);
+
+const rect=selected.getBoundingClientRect();
+highlight.style.display="block";
+highlight.style.top=rect.top+"px";
+highlight.style.left=rect.left+"px";
+highlight.style.width=rect.width+"px";
+highlight.style.height=rect.height+"px";
+
+shadow.getElementById("styleEditor").value=selected.getAttribute("style")||"";
+}
+
+document.addEventListener("click",handler,true);
+};
+
+shadow.getElementById("apply").onclick=()=>{
+if(selected){
+selected.setAttribute("style",shadow.getElementById("styleEditor").value);
+}
+};
+
+updateSelectorList();
+
+})();
